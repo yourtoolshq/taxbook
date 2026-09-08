@@ -22,8 +22,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable}`}>
-      <body className="min-h-screen bg-background text-foreground antialiased">
+    <html lang="en" className={geist.variable}>
+      <body
+        className={`${geist.className} min-h-screen bg-background text-foreground antialiased`}
+      >
         <TRPCReactProvider>
           <TooltipProvider>
             {children}
