@@ -4,14 +4,20 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "backup": "sh scripts/backup.sh",
     "build": "next build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "dev": "next dev --turbo",
+    "lint": "eslint .",
     "preview": "next build && next start",
+    "restore": "sh scripts/restore.sh",
     "start": "next start",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -40,10 +46,9 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.0.15",
-    "@testing-library/jest-dom": "^7.0.1",
-    "@testing-library/react": "^16.3.3",
     "@types/node": "^22.20.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
@@ -51,9 +56,7 @@
     "drizzle-kit": "^0.30.5",
     "eslint": "^9.39.5",
     "eslint-config-next": "^15.5.25",
-    "jsdom": "^30.0.1",
     "postcss": "^8.5.3",
-    "prettier": "^3.9.6",
     "tailwindcss": "^4.0.15",
     "typescript": "^5.8.2",
     "vitest": "^3.2.7"

@@ -1,0 +1,16 @@
+services:
+  app:
+    build:
+      context: .
+    environment:
+      DATABASE_URL: file:/data/taxbook.db
+      NODE_ENV: production
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+    volumes:
+      - taxbook-data:/data
+
+volumes:
+  taxbook-data:
+    name: taxbook-data
