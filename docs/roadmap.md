@@ -1,0 +1,312 @@
+# Roadmap
+
+Tax Book should be built in small phases that solve an immediate personal tax problem.
+
+Each phase should leave the app usable even if no later phase is ever built.
+
+Before starting implementation of any phase, have a short conversation with the user to confirm the smallest useful workflow for that phase.
+
+## Phase 1 — Tax Year Tracker
+
+### Goal
+
+Create a usable place to maintain the household's current tax-year picture.
+
+### Includes
+
+* Household
+* People
+* Tax Year
+* Manual Tax Items
+* Owner: Person or Household
+* Expected amount
+* Actual amount
+* Status
+* Notes
+
+### Example Tax Items
+
+* Employment income
+* FHSA deduction
+* RRSP deduction
+* Medical expenses
+* Professional expenses
+* Business income
+* Business expenses
+* Federal or Manitoba credits
+
+### Useful Outcome
+
+The household can start maintaining 2026 tax information immediately instead of keeping it across notes and spreadsheets.
+
+### Explicitly Deferred
+
+* Paycheque tracking
+* Record uploads
+* Tax Document tracking
+* tax calculations
+* refund estimates
+* CRA integrations
+* tax filing
+
+---
+
+## Phase 2 — Paycheques
+
+### Goal
+
+Accurately track employment income throughout the year, especially variable income.
+
+### Includes
+
+Manual Paycheque entry for each Person.
+
+Each Paycheque may include:
+
+* pay date
+* gross pay
+* income tax withheld
+* CPP
+* EI
+* other deductions
+* net pay
+
+### Calculated Values
+
+* year-to-date gross income
+* year-to-date tax withheld
+* year-to-date CPP
+* year-to-date EI
+* average pay
+* projected annual income
+
+### Useful Outcome
+
+Employment income no longer needs to be estimated manually.
+
+Variable employment income can be tracked as new Paycheques arrive.
+
+### Explicitly Deferred
+
+* payslip parsing
+* payroll integrations
+* automatic bank imports
+* advanced projection models
+
+---
+
+## Phase 3 — Records
+
+### Goal
+
+Keep the supporting information the household may need to prove tax-related amounts later.
+
+### Includes
+
+Records attached to Tax Items.
+
+A Record may contain:
+
+* date
+* amount
+* description
+* Person
+* uploaded document or image
+* notes
+
+### Example
+
+```text
+Medical Expenses
+
+Dentist        $300   Record ✓
+Glasses        $450   Record ✓
+Prescription    $80   Record ✓
+
+Total          $830
+```
+
+### Useful Outcome
+
+Tax Items that depend on household-managed proof can be supported directly inside the app.
+
+If CRA asks about a claim later, the related Records can be found from the original Tax Year.
+
+### Explicitly Deferred
+
+* OCR
+* automatic receipt extraction
+* automatic categorization
+* external document-storage integrations
+
+---
+
+## Phase 4 — Tax Documents
+
+### Goal
+
+Know which official tax documents are expected and whether the household is ready to file.
+
+### Includes
+
+Track Tax Documents such as:
+
+* T4
+* T5
+* RRSP contribution receipts
+* FHSA tax documents
+* other relevant tax slips
+
+A Tax Document may move through simple states:
+
+```text
+Expected
+→ Received
+→ Reviewed
+→ Used for Filing
+```
+
+### Useful Outcome
+
+The app can answer:
+
+> Are we still waiting for anything before filing?
+
+### Explicitly Deferred
+
+* CRA Auto-fill integration
+* automatic slip extraction
+* automatic reconciliation between Paycheques and T4s
+
+---
+
+## Phase 5 — Tax Estimate
+
+### Goal
+
+Provide a useful planning estimate of the household's tax result.
+
+### Includes
+
+Start only with tax rules relevant to the household.
+
+Potential inputs include:
+
+* employment income
+* self-employment income
+* tax withheld
+* CPP
+* EI
+* RRSP deductions
+* FHSA deductions
+* selected credits
+* selected expenses
+
+### Outputs
+
+* projected annual income
+* estimated taxable income
+* estimated tax payable
+* estimated tax already paid
+* estimated refund
+* estimated amount owing
+
+### Useful Outcome
+
+The household can make tax-planning decisions before filing season.
+
+### Important Constraint
+
+This is a planning estimate.
+
+Tax Book is not intended to replace tax filing software.
+
+### Explicitly Deferred
+
+* complete Canadian tax-rule coverage
+* every federal and provincial tax form
+* generic tax-rule engine
+* tax-filing submission
+
+---
+
+## Phase 6 — Filing and Assessment
+
+### Goal
+
+Complete the lifecycle of a Tax Year and preserve a trustworthy historical record.
+
+### Includes
+
+Tax Filing information such as:
+
+* filing date
+* submitted T1 return
+* expected Tax Result
+* actual refund or amount owing
+* refund or payment date
+* Notice of Assessment
+* CRA assessment result
+* notes
+
+### Tax Year Lifecycle
+
+```text
+Tracking
+→ Preparing
+→ Filed
+→ Assessed
+→ Archived
+```
+
+### Useful Outcome
+
+A completed Tax Year becomes a reliable historical snapshot.
+
+Opening 2026 in a future year should make it clear:
+
+* what was reported
+* what supported the claims
+* what was filed
+* what CRA assessed
+* what refund or payment occurred
+
+### Explicitly Deferred
+
+* amendments
+* reassessments
+* CRA account synchronization
+* direct tax filing
+
+---
+
+## Phase Principle
+
+Build vertically, not broadly.
+
+Prefer:
+
+> A complete small workflow that can be used today.
+
+Avoid:
+
+> A partially implemented version of every future capability.
+
+Examples:
+
+* Finish manual Tax Item tracking before building tax automation.
+* Finish Paycheque entry before considering payslip parsing.
+* Finish Record storage before considering OCR.
+* Track expected Tax Documents manually before considering CRA integrations.
+
+The app should become more useful with each phase, not merely more sophisticated.
+
+## Scope Check
+
+When a new idea appears, ask:
+
+> Does this solve a current tax problem for the household?
+
+If yes, consider whether it belongs in the current phase.
+
+If not, document it for later and keep the current phase small.
