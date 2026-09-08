@@ -62,4 +62,48 @@ test("sets up a household and tracks an item", async ({ page }) => {
   await page.getByRole("button", { name: "Delete item" }).click();
   await expect(page.getByText("Tax item deleted.")).toBeVisible();
   await expect(page.getByText("No tax items yet")).toBeVisible();
+
+  await page.getByRole("link", { name: "Paycheques", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Paycheques" })).toBeVisible();
+  await page.getByRole("button", { name: "Add employment" }).click();
+  await page.getByLabel("Employer label").fill("Employer A");
+  await page.getByRole("button", { name: "Add employment" }).last().click();
+  await expect(page.getByText("Employment added.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Add paycheque" }).first().click();
+  await page.getByLabel("Pay date").fill("2026-06-19");
+  await page.getByLabel("Gross pay").fill("2000");
+  await page.getByLabel("Income tax withheld").fill("350");
+  await page.getByLabel("CPP", { exact: true }).fill("110");
+  await page.getByLabel("CPP2", { exact: true }).fill("10");
+  await page.getByLabel("EI", { exact: true }).fill("32");
+  await page.getByLabel("Other deductions").fill("48");
+  await page.getByLabel("Net pay").fill("1450");
+  await page.getByRole("button", { name: "Add paycheque" }).last().click();
+  await expect(page.getByText("Paycheque added.")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "$2,000.00" })).toBeVisible();
+  await page.getByLabel("Filter by person").click();
+  await page.getByRole("option", { name: "Person B" }).click();
+  await expect(page.getByText("No paycheques match these filters")).toBeVisible();
+  await page.getByLabel("Filter by person").click();
+  await page.getByRole("option", { name: "Person A" }).click();
+  await expect(page.getByRole("cell", { name: "$2,000.00" })).toBeVisible();
+
+  await page.getByRole("button", { name: /Jun 19, 2026/ }).click();
+  await page.getByLabel("Gross pay").fill("2100");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Paycheque updated.")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "$2,100.00" })).toBeVisible();
+  await page.getByRole("link", { name: "Tax Items" }).click();
+  await expect(page.getByRole("link", { name: "Employment income — Employer A", exact: true })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "$2,100.00" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Paycheques", exact: true }).click();
+  await page.getByLabel("Filter by employer").click();
+  await page.getByRole("option", { name: "Person A — Employer A" }).click();
+  await page.getByRole("button", { name: "Edit employment" }).click();
+  await page.getByRole("button", { name: "Delete employment" }).click();
+  await page.getByRole("button", { name: "Delete employment" }).last().click();
+  await expect(page.getByText("Employment and its paycheques deleted.")).toBeVisible();
+  await expect(page.getByText("No paycheques yet")).toBeVisible();
 });

@@ -5,6 +5,7 @@ import {
   IconDots,
   IconEdit,
   IconPlus,
+  IconReceiptDollar,
   IconTrash,
 } from "@tabler/icons-react";
 import {
@@ -17,6 +18,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -80,10 +82,16 @@ export function TaxItemsTable({
         header: "Item",
         cell: (info) => (
           <div className="max-w-64">
-            <button className="block truncate text-left font-medium hover:text-primary" onClick={() => onEdit(info.row.original)}>
-              {info.getValue()}
-            </button>
-            {info.row.original.notes ? <p className="mt-0.5 truncate text-xs text-muted-foreground">{info.row.original.notes}</p> : null}
+            {info.row.original.valueSource === "paycheques" ? (
+              <Link className="block truncate font-medium hover:text-primary" href="/paycheques">{info.getValue()}</Link>
+            ) : (
+              <button className="block truncate text-left font-medium hover:text-primary" onClick={() => onEdit(info.row.original)}>{info.getValue()}</button>
+            )}
+            {info.row.original.valueSource === "paycheques" ? (
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">Calculated from paycheques</p>
+            ) : info.row.original.notes ? (
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">{info.row.original.notes}</p>
+            ) : null}
           </div>
         ),
       }),
@@ -138,7 +146,11 @@ export function TaxItemsTable({
       }),
       columnHelper.display({
         id: "actions",
-        cell: (info) => (
+        cell: (info) => info.row.original.valueSource === "paycheques" ? (
+          <Button variant="ghost" size="icon" asChild aria-label={`Manage ${info.row.original.name} paycheques`}>
+            <Link href="/paycheques"><IconReceiptDollar /></Link>
+          </Button>
+        ) : (
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={`Actions for ${info.row.original.name}`}><IconDots /></Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
