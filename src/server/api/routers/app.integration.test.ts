@@ -1,6 +1,6 @@
 import { createClient, type Client } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -8,10 +8,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createCaller } from "~/server/api/root";
 import * as schema from "~/server/db/schema";
 
-const migration = readFileSync(
-  new URL("../../../../drizzle/0000_hesitant_earthquake.sql", import.meta.url),
-  "utf8",
-).replaceAll("--> statement-breakpoint", "");
+const migrationsDirectory = new URL("../../../../drizzle/", import.meta.url);
+const migration = readdirSync(migrationsDirectory)
+  .filter((file) => file.endsWith(".sql"))
+  .sort()
+  .map((file) => readFileSync(new URL(file, migrationsDirectory), "utf8"))
+  .join("\n")
+  .replaceAll("--> statement-breakpoint", "");
 
 describe("Tax Book API", () => {
   let client: Client;
@@ -58,6 +61,7 @@ describe("Tax Book API", () => {
     const person = settings.people[0]!;
     await caller.taxItem.create({
       name: "Example employment income",
+      taxLineReference: "10100",
       type: "income",
       ownerKind: "person",
       personId: person.id,
@@ -68,6 +72,7 @@ describe("Tax Book API", () => {
     });
     await caller.taxItem.create({
       name: "Example contribution",
+      taxLineReference: "20800",
       type: "deduction_contribution",
       ownerKind: "household",
       personId: null,
@@ -81,6 +86,9 @@ describe("Tax Book API", () => {
     expect(overview.amounts.income.actualAmountCents).toBe(1250000);
     expect(overview.amounts.deduction_contribution.expectedAmountCents).toBe(200000);
     expect(overview.statuses).toMatchObject({ planned: 1, in_progress: 1 });
+    expect((await caller.taxItem.list()).items[0]).toMatchObject({
+      taxLineReference: "20800",
+    });
 
     const originalYear = (await caller.taxYear.list()).find((year) => year.isActive)!;
     await caller.taxYear.create({ year: 2027 });
@@ -100,6 +108,7 @@ describe("Tax Book API", () => {
     await expect(
       caller.taxItem.create({
         name: "Invalid owner",
+        taxLineReference: null,
         type: "other",
         ownerKind: "person",
         personId: null,
@@ -111,6 +120,7 @@ describe("Tax Book API", () => {
     ).rejects.toBeDefined();
     await caller.taxItem.create({
       name: "Owned item",
+      taxLineReference: null,
       type: "other",
       ownerKind: "person",
       personId: personA!.id,
@@ -132,6 +142,7 @@ describe("Tax Book API", () => {
     });
     const created = await caller.taxItem.create({
       name: "Example item",
+      taxLineReference: null,
       type: "other",
       ownerKind: "household",
       personId: null,
@@ -143,6 +154,7 @@ describe("Tax Book API", () => {
     await caller.taxItem.update({
       id: created!.id,
       name: "Updated example item",
+      taxLineReference: "Schedule 1",
       type: "other",
       ownerKind: "household",
       personId: null,
@@ -153,6 +165,7 @@ describe("Tax Book API", () => {
     });
     expect((await caller.taxItem.list()).items[0]).toMatchObject({
       name: "Updated example item",
+      taxLineReference: "Schedule 1",
       actualAmountCents: 0,
       status: "complete",
     });

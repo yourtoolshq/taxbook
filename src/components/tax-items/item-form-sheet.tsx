@@ -49,6 +49,9 @@ export function ItemFormSheet({
 }) {
   const utils = api.useUtils();
   const [name, setName] = useState(item?.name ?? "");
+  const [taxLineReference, setTaxLineReference] = useState(
+    item?.taxLineReference ?? "",
+  );
   const [type, setType] = useState<ItemType>(item?.type ?? "income");
   const [owner, setOwner] = useState(
     item?.ownerKind === "person" && item.personId
@@ -94,6 +97,7 @@ export function ItemFormSheet({
       : null;
     const values = {
       name,
+      taxLineReference: taxLineReference.trim() || null,
       type,
       ownerKind: personId === null ? ("household" as const) : ("person" as const),
       personId,
@@ -121,6 +125,19 @@ export function ItemFormSheet({
             <div className="space-y-2">
               <Label htmlFor="item-name">Name</Label>
               <Input id="item-name" placeholder="e.g. Employment income" value={name} onChange={(event) => setName(event.target.value)} required autoFocus />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tax-line-reference">Tax line/reference</Label>
+              <Input
+                id="tax-line-reference"
+                placeholder="e.g. 20800 or Schedule 7"
+                value={taxLineReference}
+                onChange={(event) => setTaxLineReference(event.target.value)}
+                maxLength={50}
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional filing reference; it does not affect calculations.
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

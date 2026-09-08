@@ -8,6 +8,13 @@
       "when": 1788880886363,
       "tag": "0000_hesitant_earthquake",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788908536636,
+      "tag": "0001_exotic_the_leader",
+      "breakpoints": true
     }
   ]
 }

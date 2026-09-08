@@ -38,6 +38,7 @@ async function listActiveItems(db: Database) {
       id: taxItems.id,
       taxYearId: taxItems.taxYearId,
       name: taxItems.name,
+      taxLineReference: taxItems.taxLineReference,
       type: taxItems.type,
       ownerKind: taxItems.ownerKind,
       personId: taxItems.personId,
@@ -73,6 +74,7 @@ export const taxItemRouter = createTRPCRouter({
         .values({
           taxYearId: year.id,
           ...input,
+          taxLineReference: input.taxLineReference || null,
           notes: input.notes || null,
         })
         .returning();
@@ -87,7 +89,11 @@ export const taxItemRouter = createTRPCRouter({
       const { id, ...values } = input;
       const [item] = await ctx.db
         .update(taxItems)
-        .set({ ...values, notes: values.notes || null })
+        .set({
+          ...values,
+          taxLineReference: values.taxLineReference || null,
+          notes: values.notes || null,
+        })
         .where(and(eq(taxItems.id, id), eq(taxItems.taxYearId, year.id)))
         .returning();
       if (!item) {

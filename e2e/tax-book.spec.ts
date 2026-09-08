@@ -15,12 +15,14 @@ test("sets up a household and tracks an item", async ({ page }) => {
   await page.getByRole("link", { name: "Tax Items", exact: true }).click();
   await page.getByRole("button", { name: "Add tax item" }).first().click();
   await page.getByLabel("Name").fill("Example employment income");
+  await page.getByLabel("Tax line/reference").fill("10100");
   await page.getByLabel("Expected amount").fill("50000");
   await page.getByLabel("Actual amount").fill("12500");
   await page.getByRole("button", { name: "Add tax item" }).last().click();
 
   await expect(page.getByText("Tax item created.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Example employment income", exact: true })).toBeVisible();
+  await expect(page.getByText("10100", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Example employment income", exact: true }).click();
   await page.getByLabel("Actual amount").fill("15000");
   await page.getByLabel("Status").click();
@@ -47,13 +49,16 @@ test("sets up a household and tracks an item", async ({ page }) => {
   await expect(page.getByText("$15,000.00")).toBeVisible();
 
   await page.getByRole("link", { name: "Tax Items", exact: true }).click();
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Actions for Example employment income" }).click();
-  await page.getByRole("menuitem", { name: "Delete" }).click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Delete this tax item?" })).toBeVisible();
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByRole("button", { name: "Example employment income", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Actions for Example employment income" }).click();
-  await page.getByRole("menuitem", { name: "Delete" }).click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
   await page.getByRole("button", { name: "Delete item" }).click();
   await expect(page.getByText("Tax item deleted.")).toBeVisible();
   await expect(page.getByText("No tax items yet")).toBeVisible();

@@ -20,6 +20,7 @@ export const taxItems = sqliteTable(
       .notNull()
       .references(() => taxYears.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    taxLineReference: text("tax_line_reference"),
     type: text("type", { enum: itemTypes }).notNull(),
     ownerKind: text("owner_kind", { enum: ownerKinds }).notNull(),
     personId: integer("person_id").references(() => people.id, {

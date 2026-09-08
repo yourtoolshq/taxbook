@@ -38,6 +38,7 @@ export const setupInput = z.object({
 export const taxItemInput = z
   .object({
     name,
+    taxLineReference: z.string().trim().max(50).nullable(),
     type: z.enum(itemTypes),
     ownerKind: z.enum(ownerKinds),
     personId: z.number().int().positive().nullable(),

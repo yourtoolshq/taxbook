@@ -87,6 +87,14 @@ export function TaxItemsTable({
           </div>
         ),
       }),
+      columnHelper.accessor("taxLineReference", {
+        header: "Tax reference",
+        cell: (info) => (
+          <span className="whitespace-nowrap text-muted-foreground">
+            {info.getValue() ?? "—"}
+          </span>
+        ),
+      }),
       columnHelper.accessor("type", {
         header: "Type",
         cell: (info) => itemTypeLabels[info.getValue()],

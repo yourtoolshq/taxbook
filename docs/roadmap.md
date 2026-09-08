@@ -19,6 +19,7 @@ Create a usable place to maintain the household's current tax-year picture.
 * Tax Year
 * Manual Tax Items
 * Owner: Person or Household
+* Optional tax line/reference
 * Expected amount
 * Actual amount
 * Status
