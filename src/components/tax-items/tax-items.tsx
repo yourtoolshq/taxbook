@@ -35,6 +35,8 @@ export function TaxItems() {
       await Promise.all([
         utils.taxItem.list.invalidate(),
         utils.taxItem.overview.invalidate(),
+        utils.taxDocument.list.invalidate(),
+        utils.taxDocument.overview.invalidate(),
       ]);
       toast.success("Tax item deleted.");
     },
@@ -90,7 +92,7 @@ export function TaxItems() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this tax item?</AlertDialogTitle>
             <AlertDialogDescription>
-              “{deleting?.name}”, all of its supporting Records, and their attachments will be permanently removed from this tax year. This cannot be undone.
+              “{deleting?.name}”, all of its supporting Records, Tax Documents, and attachments will be permanently removed from this tax year. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

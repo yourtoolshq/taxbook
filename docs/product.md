@@ -157,7 +157,7 @@ The app should track whether an expected Tax Document:
 
 * is expected
 * has been received
-* has been reviewed
+* is ready to file after review
 * has been used for filing
 
 This helps determine whether a tax year is ready to file.

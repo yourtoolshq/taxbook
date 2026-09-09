@@ -41,6 +41,8 @@ export function YearSwitcher({ years }: { years: TaxYear[] }) {
         utils.settings.get.invalidate(),
         utils.taxItem.list.invalidate(),
         utils.taxItem.overview.invalidate(),
+        utils.taxDocument.list.invalidate(),
+        utils.taxDocument.overview.invalidate(),
         utils.taxYear.list.invalidate(),
       ]);
       router.refresh();
@@ -55,6 +57,8 @@ export function YearSwitcher({ years }: { years: TaxYear[] }) {
         utils.settings.get.invalidate(),
         utils.taxItem.list.invalidate(),
         utils.taxItem.overview.invalidate(),
+        utils.taxDocument.list.invalidate(),
+        utils.taxDocument.overview.invalidate(),
         utils.taxYear.list.invalidate(),
       ]);
       router.refresh();

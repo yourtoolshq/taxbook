@@ -80,6 +80,22 @@ Examples:
 
 These are separate concepts because they have different roles in the tax workflow.
 
+A Tax Document belongs to one Tax Item, while a Tax Item may exist without any
+Tax Documents or have several of them. The document has its own filing workflow,
+independent of the Tax Item's Planned, In Progress, or Complete status:
+
+```text
+Expected
+→ Received
+→ Ready to File
+→ Used for Filing
+```
+
+Tax Documents may store one PDF or image with the local database. Adding an
+attachment to an Expected document marks it Received. Ready to File means the
+household has checked the document; Tax Book does not automatically extract or
+reconcile its values.
+
 ---
 
 ### Income vs Paycheque

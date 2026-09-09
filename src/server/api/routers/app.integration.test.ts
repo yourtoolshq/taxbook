@@ -13,6 +13,11 @@ import {
   getActiveAttachment,
   updateRecord,
 } from "~/server/api/record-values";
+import {
+  createTaxDocument,
+  getActiveTaxDocumentAttachment,
+  updateTaxDocument,
+} from "~/server/api/tax-document-values";
 import type { Database } from "~/server/api/helpers";
 import * as schema from "~/server/db/schema";
 
@@ -551,5 +556,150 @@ describe("Tax Book API", () => {
         confirmReplaceActual: false,
       }, null),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("tracks official Tax Documents, readiness, ownership, and attachments", async () => {
+    await caller.setup.initialize({
+      householdName: "Example household",
+      people: ["Person A", "Person B"],
+      year: 2026,
+    });
+    const [personA, personB] = (await caller.settings.get()).people;
+    const personItem = await caller.taxItem.create({
+      name: "Example employment income",
+      taxLineReference: "10100",
+      type: "income",
+      ownerKind: "person",
+      personId: personA!.id,
+      expectedAmountCents: null,
+      actualAmountCents: null,
+      status: "complete",
+      notes: null,
+    });
+    const householdItem = await caller.taxItem.create({
+      name: "Example contribution",
+      taxLineReference: "20800",
+      type: "deduction_contribution",
+      ownerKind: "household",
+      personId: null,
+      expectedAmountCents: null,
+      actualAmountCents: null,
+      status: "in_progress",
+      notes: null,
+    });
+
+    const expected = await createTaxDocument(database, {
+      taxItemId: personItem!.id,
+      type: "t4",
+      customTypeName: null,
+      issuer: "Employer A",
+      personId: null,
+      notes: null,
+    }, null);
+    const received = await createTaxDocument(database, {
+      taxItemId: householdItem!.id,
+      type: "other",
+      customTypeName: "T4A",
+      issuer: "Issuer A",
+      personId: personB!.id,
+      notes: "Fictional document note",
+    }, {
+      fileName: "fictional-slip.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 8,
+      data: Buffer.from("example"),
+    });
+
+    expect(expected.status).toBe("expected");
+    expect(received.status).toBe("received");
+    const list = await caller.taxDocument.list();
+    expect(list.items.find((document) => document.id === expected.id)).toMatchObject({
+      taxItemName: "Example employment income",
+      personName: "Person A",
+    });
+    expect(list.items.find((document) => document.id === received.id)).toMatchObject({
+      customTypeName: "T4A",
+      personName: "Person B",
+      attachmentFileName: "fictional-slip.pdf",
+    });
+    expect(await caller.taxDocument.overview()).toMatchObject({
+      total: 2,
+      isReady: false,
+      counts: { expected: 1, received: 1, ready: 0, used: 0 },
+    });
+    expect((await getActiveTaxDocumentAttachment(database, received.id)).data.toString()).toBe("example");
+
+    await updateTaxDocument(database, expected.id, {
+      type: "t4",
+      customTypeName: null,
+      issuer: "Employer A",
+      personId: null,
+      status: "expected",
+      notes: null,
+    }, {
+      type: "replace",
+      attachment: {
+        fileName: "fictional-t4.png",
+        mimeType: "image/png",
+        sizeBytes: 11,
+        data: Buffer.from("replacement"),
+      },
+    });
+    expect((await caller.taxDocument.list()).items.find((document) => document.id === expected.id)?.status).toBe("received");
+
+    for (const document of [expected, received]) {
+      await updateTaxDocument(database, document.id, {
+        type: document.type,
+        customTypeName: document.customTypeName,
+        issuer: document.issuer,
+        personId: document.id === received.id ? personB!.id : null,
+        status: document.id === received.id ? "used" : "ready",
+        notes: document.notes,
+      }, document.id === expected.id ? { type: "remove" } : { type: "keep" });
+    }
+    expect(await caller.taxDocument.overview()).toMatchObject({ total: 2, isReady: true });
+    await expect(getActiveTaxDocumentAttachment(database, expected.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+    await caller.taxItem.delete({ id: householdItem!.id });
+    expect(await database.query.taxDocuments.findFirst({
+      where: (table, operators) => operators.eq(table.id, received.id),
+    })).toBeUndefined();
+    expect(await database.query.taxDocumentAttachments.findFirst({
+      where: (table, operators) => operators.eq(table.taxDocumentId, received.id),
+    })).toBeUndefined();
+  });
+
+  it("isolates Tax Documents to the active tax year", async () => {
+    await caller.setup.initialize({ householdName: "Example household", people: ["Person A"], year: 2026 });
+    const item = await caller.taxItem.create({
+      name: "Example item",
+      taxLineReference: null,
+      type: "other",
+      ownerKind: "household",
+      personId: null,
+      expectedAmountCents: null,
+      actualAmountCents: null,
+      status: "planned",
+      notes: null,
+    });
+    const document = await createTaxDocument(database, {
+      taxItemId: item!.id,
+      type: "t5",
+      customTypeName: null,
+      issuer: "Financial institution",
+      personId: null,
+      notes: null,
+    }, null);
+    await caller.taxYear.create({ year: 2027 });
+    expect((await caller.taxDocument.list()).items).toHaveLength(0);
+    expect(await caller.taxDocument.overview()).toMatchObject({ total: 0, isReady: false });
+    await expect(updateTaxDocument(database, document.id, {
+      type: "t5",
+      customTypeName: null,
+      issuer: "Financial institution",
+      personId: null,
+      status: "received",
+      notes: null,
+    }, { type: "keep" })).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });

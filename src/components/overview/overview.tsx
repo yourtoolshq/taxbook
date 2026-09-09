@@ -1,6 +1,6 @@
 "use client";
 
-import { IconArrowRight, IconCircleCheck, IconClock, IconListCheck } from "@tabler/icons-react";
+import { IconArrowRight, IconCircleCheck, IconClock, IconFileDescription, IconListCheck } from "@tabler/icons-react";
 import Link from "next/link";
 
 import { Badge } from "~/components/ui/badge";
@@ -30,22 +30,25 @@ const statusStyles: Record<ItemStatus, string> = {
 
 export function Overview() {
   const overview = api.taxItem.overview.useQuery();
+  const documents = api.taxDocument.overview.useQuery();
 
-  if (overview.isLoading) return <OverviewSkeleton />;
-  if (overview.error) {
+  if (overview.isLoading || documents.isLoading) return <OverviewSkeleton />;
+  const error = overview.error ?? documents.error;
+  if (error) {
     return (
       <div className="p-6">
         <Card>
           <CardHeader>
             <CardTitle>Overview unavailable</CardTitle>
-            <CardDescription>{overview.error.message}</CardDescription>
+            <CardDescription>{error.message}</CardDescription>
           </CardHeader>
         </Card>
       </div>
     );
   }
-  if (!overview.data) return null;
+  if (!overview.data || !documents.data) return null;
   const data = overview.data;
+  const documentData = documents.data;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -111,29 +114,35 @@ export function Overview() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base"><IconListCheck className="size-5 text-primary" /> Tracking progress</CardTitle>
-            <CardDescription>{data.totalItems} total {data.totalItems === 1 ? "item" : "items"} for {data.year.year}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {(["planned", "in_progress", "complete"] as const).map((status) => {
-              const count = data.statuses[status];
-              const width = data.totalItems === 0 ? 0 : Math.round((count / data.totalItems) * 100);
-              return (
-                <div key={status}>
-                  <div className="mb-1.5 flex justify-between text-sm">
-                    <span>{itemStatusLabels[status]}</span>
-                    <span className="font-medium tabular-nums">{count}</span>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base"><IconListCheck className="size-5 text-primary" /> Tracking progress</CardTitle>
+              <CardDescription>{data.totalItems} total {data.totalItems === 1 ? "item" : "items"} for {data.year.year}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(["planned", "in_progress", "complete"] as const).map((status) => {
+                const count = data.statuses[status];
+                const width = data.totalItems === 0 ? 0 : Math.round((count / data.totalItems) * 100);
+                return (
+                  <div key={status}>
+                    <div className="mb-1.5 flex justify-between text-sm"><span>{itemStatusLabels[status]}</span><span className="font-medium tabular-nums">{count}</span></div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${width}%` }} /></div>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${width}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+                );
+              })}
+            </CardContent>
+          </Card>
+          <Card className={documentData.isReady ? "border-emerald-200 bg-emerald-50/60" : undefined}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base"><IconFileDescription className="size-5 text-primary" /> Filing documents</CardTitle>
+              <CardDescription>{documentData.total === 0 ? "No tax documents tracked" : documentData.isReady ? "All tracked documents are ready" : `${documentData.counts.expected} waiting · ${documentData.counts.received} need review`}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline" className="w-full"><Link href="/documents">View Tax Documents <IconArrowRight /></Link></Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

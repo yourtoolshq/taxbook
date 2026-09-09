@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+test.setTimeout(60_000);
+
 test("sets up a household and tracks an item", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/setup$/);
@@ -59,6 +61,36 @@ test("sets up a household and tracks an item", async ({ page }) => {
   await page.getByRole("button", { name: "Delete Record" }).click();
   await expect(page.getByText("Record deleted.")).toBeVisible();
 
+  await page.getByRole("button", { name: "Add Tax Document" }).first().click();
+  await page.getByLabel("Issuer").fill("Employer A");
+  await page.getByLabel("Attachment").setInputFiles({
+    name: "fictional-t4.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("fictional T4 content"),
+  });
+  await page.getByRole("button", { name: "Add Tax Document" }).last().click();
+  await expect(page.getByText("Tax Document added.")).toBeVisible();
+  await expect(page.getByText("Received", { exact: true })).toBeVisible();
+  const taxDocumentAttachmentHref = await page.getByRole("link", { name: "fictional-t4.pdf" }).getAttribute("href");
+  const taxDocumentAttachmentResponse = await page.request.get(taxDocumentAttachmentHref!);
+  expect(taxDocumentAttachmentResponse.ok()).toBe(true);
+  expect(taxDocumentAttachmentResponse.headers()["content-type"]).toBe("application/pdf");
+  expect(taxDocumentAttachmentResponse.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(taxDocumentAttachmentResponse.headers()["content-disposition"]).toContain("inline");
+  expect(await taxDocumentAttachmentResponse.text()).toBe("fictional T4 content");
+  const taxDocumentDownloadResponse = await page.request.get(`${taxDocumentAttachmentHref}?download=1`);
+  expect(taxDocumentDownloadResponse.headers()["content-disposition"]).toContain("attachment");
+
+  await page.getByRole("link", { name: "Tax Documents", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Tax Documents" })).toBeVisible();
+  await expect(page.getByText("1 need review")).toBeVisible();
+  await page.getByLabel("Status for T4 from Employer A").click();
+  await page.getByRole("option", { name: "Ready to file" }).click();
+  await expect(page.getByText("All tracked documents are ready")).toBeVisible();
+
+  await page.getByRole("link", { name: "Tax Items", exact: true }).click();
+  await page.getByRole("link", { name: "Example employment income", exact: true }).click();
+
   await page.getByRole("button", { name: "Edit Tax Item" }).click();
   await page.getByLabel("Actual amount").fill("15000");
   await page.getByLabel("Status").click();
@@ -71,6 +103,7 @@ test("sets up a household and tracks an item", async ({ page }) => {
   await page.getByRole("link", { name: "Overview" }).click();
   await expect(page.getByText("$15,000.00")).toBeVisible();
   await expect(page.getByText("Expected $50,000.00 · 1 item")).toBeVisible();
+  await expect(page.getByText("All tracked documents are ready")).toBeVisible();
 
   await page.getByRole("button", { name: "Tax year" }).click();
   await page.getByRole("menuitem", { name: "New tax year" }).click();
@@ -78,11 +111,13 @@ test("sets up a household and tracks an item", async ({ page }) => {
   await page.getByRole("button", { name: "Create year" }).click();
   await expect(page.getByText("2027 tax year")).toBeVisible();
   await expect(page.getByText("0 total items for 2027")).toBeVisible();
+  await expect(page.getByText("No tax documents tracked")).toBeVisible();
 
   await page.getByRole("button", { name: "Tax year" }).click();
   await page.getByRole("menuitem", { name: "2026" }).click();
   await expect(page.getByText("2026 tax year")).toBeVisible();
   await expect(page.getByText("$15,000.00")).toBeVisible();
+  await expect(page.getByText("All tracked documents are ready")).toBeVisible();
 
   await page.getByRole("link", { name: "Tax Items", exact: true }).click();
   await page.waitForLoadState("networkidle");

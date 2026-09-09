@@ -180,9 +180,16 @@ A Tax Document may move through simple states:
 ```text
 Expected
 → Received
-→ Reviewed
+→ Ready to File
 → Used for Filing
 ```
+
+In the implemented workflow, each Tax Document belongs to one Tax Item and has
+a type, issuer, status, optional notes, and one optional PDF or image attachment.
+Person-owned items pass their owner to the document, while household-owned items
+may identify a household member. A year is ready when every tracked document is
+Ready to File or Used for Filing; an empty document list is not reported as
+ready. Tax Item and Tax Document statuses remain independent.
 
 ### Useful Outcome
 

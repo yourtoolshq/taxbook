@@ -4,6 +4,7 @@ import { recordRouter } from "~/server/api/routers/record";
 import { settingsRouter } from "~/server/api/routers/settings";
 import { setupRouter } from "~/server/api/routers/setup";
 import { taxItemRouter } from "~/server/api/routers/tax-item";
+import { taxDocumentRouter } from "~/server/api/routers/tax-document";
 import { taxYearRouter } from "~/server/api/routers/tax-year";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
@@ -14,6 +15,7 @@ export const appRouter = createTRPCRouter({
   settings: settingsRouter,
   setup: setupRouter,
   taxItem: taxItemRouter,
+  taxDocument: taxDocumentRouter,
   taxYear: taxYearRouter,
 });
 

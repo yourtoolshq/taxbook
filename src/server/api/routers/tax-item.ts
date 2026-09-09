@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { buildOverview } from "~/domain/overview";
 import { taxItemInput, taxItemUpdateInput } from "~/domain/tax-item";
-import { people, records, taxItems } from "~/server/db/schema";
+import { people, records, taxDocuments, taxItems } from "~/server/db/schema";
 import type { Database } from "../helpers";
 import { requireActiveYear, requireHousehold } from "../helpers";
 import { createTRPCRouter, publicProcedure } from "../trpc";
@@ -130,10 +130,8 @@ export const taxItemRouter = createTRPCRouter({
           .where(and(eq(taxItems.id, id), eq(taxItems.taxYearId, year.id)))
           .returning();
         if (updated?.ownerKind === "person") {
-          await tx
-            .update(records)
-            .set({ personId: updated.personId })
-            .where(eq(records.taxItemId, updated.id));
+          await tx.update(records).set({ personId: updated.personId }).where(eq(records.taxItemId, updated.id));
+          await tx.update(taxDocuments).set({ personId: updated.personId }).where(eq(taxDocuments.taxItemId, updated.id));
         }
         return updated;
       });

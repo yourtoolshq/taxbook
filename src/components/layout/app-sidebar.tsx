@@ -2,6 +2,7 @@
 
 import {
   IconBook2,
+  IconFileDescription,
   IconLayoutDashboard,
   IconListDetails,
   IconReceiptDollar,
@@ -29,6 +30,7 @@ const navigation = [
   { title: "Overview", href: "/", icon: IconLayoutDashboard },
   { title: "Tax Items", href: "/items", icon: IconListDetails },
   { title: "Paycheques", href: "/paycheques", icon: IconReceiptDollar },
+  { title: "Tax Documents", href: "/documents", icon: IconFileDescription },
   { title: "Settings", href: "/settings", icon: IconSettings },
 ];
 
