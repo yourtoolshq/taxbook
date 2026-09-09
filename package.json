@@ -10,7 +10,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "dev": "next dev --turbo",
+    "dev": "pnpm db:migrate && next dev --turbo",
     "lint": "eslint .",
     "preview": "next build && next start",
     "restore": "sh scripts/restore.sh",

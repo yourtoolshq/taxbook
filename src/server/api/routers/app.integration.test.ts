@@ -189,4 +189,144 @@ describe("Tax Book API", () => {
     settings = await caller.settings.get();
     expect(settings.people.map((person) => person.name)).toEqual(["Person A"]);
   });
+
+  it("tracks paycheques and keeps employment Tax Items synchronized", async () => {
+    await caller.setup.initialize({
+      householdName: "Example household",
+      people: ["Person A", "Person B"],
+      year: 2026,
+    });
+    const [personA, personB] = (await caller.settings.get()).people;
+    const current = await caller.employment.create({
+      personId: personA!.id,
+      employerName: "Employer A",
+      payFrequency: "biweekly",
+      status: "active",
+      endDate: null,
+      typicalGrossOverrideCents: null,
+    });
+    const previous = await caller.employment.create({
+      personId: personB!.id,
+      employerName: "Employer B",
+      payFrequency: "monthly",
+      status: "ended",
+      endDate: "2026-03-31",
+      typicalGrossOverrideCents: null,
+    });
+
+    const first = await caller.paycheque.create({
+      employmentId: current!.id,
+      payDate: "2026-06-05",
+      grossPayCents: 100_000,
+      incomeTaxCents: 20_000,
+      cppCents: 5_000,
+      cpp2Cents: 0,
+      eiCents: 2_000,
+      otherDeductionsCents: 3_000,
+      netPayCents: 70_000,
+    });
+    const second = await caller.paycheque.create({
+      employmentId: current!.id,
+      payDate: "2026-06-19",
+      grossPayCents: 120_000,
+      incomeTaxCents: 24_000,
+      cppCents: 6_000,
+      cpp2Cents: 500,
+      eiCents: 2_400,
+      otherDeductionsCents: 3_000,
+      netPayCents: 84_100,
+    });
+    await caller.paycheque.create({
+      employmentId: previous!.id,
+      payDate: "2026-03-31",
+      grossPayCents: 90_000,
+      incomeTaxCents: 18_000,
+      cppCents: 4_500,
+      cpp2Cents: 0,
+      eiCents: 1_800,
+      otherDeductionsCents: 0,
+      netPayCents: 65_700,
+    });
+
+    let employmentList = await caller.employment.list();
+    expect(employmentList.items).toHaveLength(2);
+    expect(employmentList.items.find((item) => item.id === current!.id)?.projection).toMatchObject({
+      actualGrossCents: 220_000,
+      averageGrossCents: 110_000,
+    });
+    expect(employmentList.items.find((item) => item.id === previous!.id)?.projection).toMatchObject({
+      actualGrossCents: 90_000,
+      projectedGrossCents: 90_000,
+      remainingPaycheques: 0,
+    });
+
+    let items = (await caller.taxItem.list()).items;
+    const currentItem = items.find((item) => item.name === "Employment income — Employer A")!;
+    expect(currentItem).toMatchObject({
+      actualAmountCents: 220_000,
+      ownerKind: "person",
+      personId: personA!.id,
+      taxLineReference: "10100",
+      valueSource: "paycheques",
+    });
+    await expect(
+      caller.taxItem.delete({ id: currentItem.id }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+
+    await caller.paycheque.update({
+      id: second!.id,
+      employmentId: current!.id,
+      payDate: "2026-06-19",
+      grossPayCents: 140_000,
+      incomeTaxCents: 28_000,
+      cppCents: 7_000,
+      cpp2Cents: 700,
+      eiCents: 2_800,
+      otherDeductionsCents: 3_000,
+      netPayCents: 98_500,
+    });
+    items = (await caller.taxItem.list()).items;
+    expect(items.find((item) => item.id === currentItem.id)?.actualAmountCents).toBe(240_000);
+
+    await caller.paycheque.delete({ id: first!.id });
+    employmentList = await caller.employment.list();
+    expect(employmentList.items.find((item) => item.id === current!.id)?.projection?.actualGrossCents).toBe(140_000);
+
+    await caller.employment.delete({ id: previous!.id });
+    expect((await caller.paycheque.list()).items).toHaveLength(1);
+    expect((await caller.taxItem.list()).items).toHaveLength(1);
+  });
+
+  it("keeps employment and paycheque data inside the active tax year", async () => {
+    await caller.setup.initialize({
+      householdName: "Example household",
+      people: ["Person A"],
+      year: 2026,
+    });
+    const person = (await caller.settings.get()).people[0]!;
+    const employment = await caller.employment.create({
+      personId: person.id,
+      employerName: "Employer A",
+      payFrequency: "weekly",
+      status: "active",
+      endDate: null,
+      typicalGrossOverrideCents: null,
+    });
+    await expect(
+      caller.paycheque.create({
+        employmentId: employment!.id,
+        payDate: "2025-12-31",
+        grossPayCents: 100_000,
+        incomeTaxCents: 0,
+        cppCents: 0,
+        cpp2Cents: 0,
+        eiCents: 0,
+        otherDeductionsCents: 0,
+        netPayCents: 100_000,
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await caller.taxYear.create({ year: 2027 });
+    expect((await caller.employment.list()).items).toHaveLength(0);
+    expect((await caller.paycheque.list()).items).toHaveLength(0);
+  });
 });

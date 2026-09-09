@@ -12,6 +12,7 @@ The goal is to keep the model understandable in normal personal-tax language and
 | **Person**        | One individual tax filer in the household                             |
 | **Tax Year**      | One calendar year of tax information, such as 2026                    |
 | **Income Source** | Where a person earns income from                                      |
+| **Employment**    | One person's employment with one employer during a Tax Year           |
 | **Paycheque**     | One employer payment received by a person                             |
 | **Income**        | Income recorded or projected for a person during a tax year           |
 | **Tax Item**      | Anything that matters to the tax return                               |
@@ -98,6 +99,20 @@ Projected annual: $68,500
 
 Paycheques contribute to Income.
 
+### Employment and Employer Changes
+
+Paycheques belong to an **Employment**, not directly to a Person.
+
+An Employment belongs to one Person and one Tax Year. If a Person changes
+employers during the year, each employer is represented by a separate
+Employment. This keeps the paycheques, projections, and eventual T4 for each
+employer distinct.
+
+Each Employment creates one calculated employment-income Tax Item. Its actual
+amount is the sum of recorded gross pay. Its expected amount is the current
+projection. These calculated amounts are managed through Paycheques rather than
+edited manually on the Tax Item.
+
 ---
 
 ## Domain Relationships
@@ -110,6 +125,7 @@ flowchart TD
     TaxYear[Tax Year]
 
     IncomeSource[Income Source]
+    Employment[Employment]
     Paycheque[Paycheque]
     Income[Income]
 
@@ -125,8 +141,11 @@ flowchart TD
     Household -->|has| Person
     Household -->|tracks| TaxYear
 
-    Person -->|has| IncomeSource
-    IncomeSource -->|produces| Paycheque
+    Person -->|has during a Tax Year| Employment
+    TaxYear -->|contains| Employment
+    Employment -->|represents| IncomeSource
+    Employment -->|produces| Paycheque
+    Employment -->|drives| TaxItem
     Paycheque -->|contributes to| Income
 
     TaxYear -->|contains| Income

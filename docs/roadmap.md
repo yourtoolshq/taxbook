@@ -68,6 +68,7 @@ Each Paycheque may include:
 * gross pay
 * income tax withheld
 * CPP
+* CPP2
 * EI
 * other deductions
 * net pay
@@ -80,6 +81,13 @@ Each Paycheque may include:
 * year-to-date EI
 * average pay
 * projected annual income
+
+Each employer is tracked as a separate Employment for a Person and Tax Year.
+An Employment creates a calculated employment-income Tax Item. Its actual value
+is the gross pay recorded so far, and its expected value is a transparent
+projection based on its pay frequency and average gross pay. A typical-pay
+override is available when the average is not representative. Ended employments
+contribute actual income but no projected future pay.
 
 ### Useful Outcome
 

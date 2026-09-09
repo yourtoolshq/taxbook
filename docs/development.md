@@ -7,10 +7,13 @@ Tax Book uses pnpm and Node.js 22 or newer.
     cp .env.example .env
     mkdir -p .data
     pnpm install
-    pnpm db:migrate
     pnpm dev
 
 Open <http://localhost:3000>.
+
+The development command applies committed database migrations before starting
+Next.js. This keeps an existing local database aligned with the checked-out
+application version.
 
 ## Main is releasable
 

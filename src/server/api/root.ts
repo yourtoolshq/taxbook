@@ -1,3 +1,5 @@
+import { employmentRouter } from "~/server/api/routers/employment";
+import { paychequeRouter } from "~/server/api/routers/paycheque";
 import { settingsRouter } from "~/server/api/routers/settings";
 import { setupRouter } from "~/server/api/routers/setup";
 import { taxItemRouter } from "~/server/api/routers/tax-item";
@@ -5,6 +7,8 @@ import { taxYearRouter } from "~/server/api/routers/tax-year";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
+  employment: employmentRouter,
+  paycheque: paychequeRouter,
   settings: settingsRouter,
   setup: setupRouter,
   taxItem: taxItemRouter,

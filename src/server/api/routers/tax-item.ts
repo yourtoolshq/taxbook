@@ -46,6 +46,7 @@ async function listActiveItems(db: Database) {
       expectedAmountCents: taxItems.expectedAmountCents,
       actualAmountCents: taxItems.actualAmountCents,
       status: taxItems.status,
+      valueSource: taxItems.valueSource,
       notes: taxItems.notes,
       createdAt: taxItems.createdAt,
       updatedAt: taxItems.updatedAt,
@@ -87,6 +88,19 @@ export const taxItemRouter = createTRPCRouter({
       const year = await requireActiveYear(ctx.db, household.id);
       await validatePerson(ctx.db, household.id, input.personId);
       const { id, ...values } = input;
+      const existing = await ctx.db.query.taxItems.findFirst({
+        where: (table, operators) =>
+          operators.and(
+            operators.eq(table.id, id),
+            operators.eq(table.taxYearId, year.id),
+          ),
+      });
+      if (existing?.valueSource === "paycheques") {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Manage this calculated item from Paycheques.",
+        });
+      }
       const [item] = await ctx.db
         .update(taxItems)
         .set({
@@ -110,12 +124,22 @@ export const taxItemRouter = createTRPCRouter({
       const household = await requireHousehold(ctx.db);
       const year = await requireActiveYear(ctx.db, household.id);
       const [item] = await ctx.db
+        .select({ valueSource: taxItems.valueSource })
+        .from(taxItems)
+        .where(and(eq(taxItems.id, input.id), eq(taxItems.taxYearId, year.id)));
+      if (item?.valueSource === "paycheques") {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Delete the employment from Paycheques instead.",
+        });
+      }
+      const [deleted] = await ctx.db
         .delete(taxItems)
         .where(
           and(eq(taxItems.id, input.id), eq(taxItems.taxYearId, year.id)),
         )
         .returning({ id: taxItems.id });
-      if (!item) {
+      if (!deleted) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Tax item not found.",

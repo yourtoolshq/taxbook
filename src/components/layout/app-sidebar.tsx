@@ -4,6 +4,7 @@ import {
   IconBook2,
   IconLayoutDashboard,
   IconListDetails,
+  IconReceiptDollar,
   IconSettings,
 } from "@tabler/icons-react";
 import Link from "next/link";
@@ -27,6 +28,7 @@ import { YearSwitcher } from "./year-switcher";
 const navigation = [
   { title: "Overview", href: "/", icon: IconLayoutDashboard },
   { title: "Tax Items", href: "/items", icon: IconListDetails },
+  { title: "Paycheques", href: "/paycheques", icon: IconReceiptDollar },
   { title: "Settings", href: "/settings", icon: IconSettings },
 ];
 

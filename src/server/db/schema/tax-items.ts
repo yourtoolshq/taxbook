@@ -7,7 +7,12 @@ import {
   text,
 } from "drizzle-orm/sqlite-core";
 
-import { itemStatuses, itemTypes, ownerKinds } from "~/domain/tax-item";
+import {
+  itemStatuses,
+  itemTypes,
+  ownerKinds,
+  valueSources,
+} from "~/domain/tax-item";
 import { people } from "./people";
 import { timestamps } from "./shared";
 import { taxYears } from "./tax-years";
@@ -29,6 +34,9 @@ export const taxItems = sqliteTable(
     expectedAmountCents: integer("expected_amount_cents"),
     actualAmountCents: integer("actual_amount_cents"),
     status: text("status", { enum: itemStatuses }).notNull(),
+    valueSource: text("value_source", { enum: valueSources })
+      .default("manual")
+      .notNull(),
     notes: text("notes"),
     ...timestamps,
   },
