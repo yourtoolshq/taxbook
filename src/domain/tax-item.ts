@@ -9,7 +9,7 @@ export const itemTypes = [
 ] as const;
 export const itemStatuses = ["planned", "in_progress", "complete"] as const;
 export const ownerKinds = ["household", "person"] as const;
-export const valueSources = ["manual", "paycheques"] as const;
+export const valueSources = ["manual", "paycheques", "records"] as const;
 
 export type ItemType = (typeof itemTypes)[number];
 export type ItemStatus = (typeof itemStatuses)[number];

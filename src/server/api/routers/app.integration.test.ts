@@ -3,9 +3,17 @@ import { drizzle } from "drizzle-orm/libsql";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Buffer } from "node:buffer";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createCaller } from "~/server/api/root";
+import {
+  createRecord,
+  deleteRecord,
+  getActiveAttachment,
+  updateRecord,
+} from "~/server/api/record-values";
+import type { Database } from "~/server/api/helpers";
 import * as schema from "~/server/db/schema";
 
 const migrationsDirectory = new URL("../../../../drizzle/", import.meta.url);
@@ -19,14 +27,15 @@ const migration = readdirSync(migrationsDirectory)
 describe("Tax Book API", () => {
   let client: Client;
   let caller: ReturnType<typeof createCaller>;
+  let database: Database;
   let testDirectory: string;
 
   beforeEach(async () => {
     testDirectory = mkdtempSync(join(tmpdir(), "taxbook-test-"));
     client = createClient({ url: `file:${join(testDirectory, "test.db")}` });
     await client.executeMultiple(migration);
-    const db = drizzle(client, { schema });
-    caller = createCaller({ db, headers: new Headers() });
+    database = drizzle(client, { schema });
+    caller = createCaller({ db: database, headers: new Headers() });
   });
 
   afterEach(() => {
@@ -328,5 +337,219 @@ describe("Tax Book API", () => {
     await caller.taxYear.create({ year: 2027 });
     expect((await caller.employment.list()).items).toHaveLength(0);
     expect((await caller.paycheque.list()).items).toHaveLength(0);
+  });
+
+  it("tracks supporting Records and keeps their Tax Item total synchronized", async () => {
+    await caller.setup.initialize({
+      householdName: "Example household",
+      people: ["Person A", "Person B"],
+      year: 2026,
+    });
+    const [personA] = (await caller.settings.get()).people;
+    const item = await caller.taxItem.create({
+      name: "Example medical expenses",
+      taxLineReference: "33099",
+      type: "eligible_expense",
+      ownerKind: "household",
+      personId: null,
+      expectedAmountCents: null,
+      actualAmountCents: 50_000,
+      status: "in_progress",
+      notes: null,
+    });
+
+    await expect(
+      createRecord(
+        database,
+        {
+          taxItemId: item!.id,
+          date: "2025-12-15",
+          description: "Example appointment",
+          amountCents: 12_500,
+          personId: personA!.id,
+          notes: "Fictional supporting note",
+          confirmReplaceActual: false,
+        },
+        null,
+      ),
+    ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+
+    const first = await createRecord(
+      database,
+      {
+        taxItemId: item!.id,
+        date: "2025-12-15",
+        description: "Example appointment",
+        amountCents: 12_500,
+        personId: personA!.id,
+        notes: "Fictional supporting note",
+        confirmReplaceActual: true,
+      },
+      {
+        fileName: "fictional-receipt.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 8,
+        data: Buffer.from("example"),
+      },
+    );
+    const second = await createRecord(
+      database,
+      {
+        taxItemId: item!.id,
+        date: "2026-02-10",
+        description: "Example prescription",
+        amountCents: 2_500,
+        personId: null,
+        notes: null,
+        confirmReplaceActual: false,
+      },
+      null,
+    );
+
+    let detail = await caller.taxItem.get({ id: item!.id });
+    expect(detail.item).toMatchObject({
+      actualAmountCents: 15_000,
+      valueSource: "records",
+      recordCount: 2,
+    });
+    const listed = await caller.record.list({ taxItemId: item!.id });
+    expect(listed.items.map((record) => record.description)).toEqual([
+      "Example prescription",
+      "Example appointment",
+    ]);
+    expect(listed.items.find((record) => record.id === first.id)).toMatchObject({
+      personName: "Person A",
+      attachmentFileName: "fictional-receipt.pdf",
+    });
+    expect((await getActiveAttachment(database, first.id)).data.toString()).toBe("example");
+    await expect(caller.settings.deletePerson({ id: personA!.id })).rejects.toMatchObject({ code: "CONFLICT" });
+
+    await updateRecord(
+      database,
+      first.id,
+      {
+        date: "2025-12-15",
+        description: "Updated example appointment",
+        amountCents: 10_000,
+        personId: personA!.id,
+        notes: null,
+      },
+      {
+        type: "replace",
+        attachment: {
+          fileName: "replacement.png",
+          mimeType: "image/png",
+          sizeBytes: 11,
+          data: Buffer.from("replacement"),
+        },
+      },
+    );
+    detail = await caller.taxItem.get({ id: item!.id });
+    expect(detail.item.actualAmountCents).toBe(12_500);
+    expect(await getActiveAttachment(database, first.id)).toMatchObject({
+      fileName: "replacement.png",
+      mimeType: "image/png",
+    });
+    await updateRecord(
+      database,
+      first.id,
+      {
+        date: "2025-12-15",
+        description: "Updated example appointment",
+        amountCents: 10_000,
+        personId: personA!.id,
+        notes: null,
+      },
+      { type: "remove" },
+    );
+    await expect(getActiveAttachment(database, first.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+    await deleteRecord(database, first.id);
+    await deleteRecord(database, second.id);
+    detail = await caller.taxItem.get({ id: item!.id });
+    expect(detail.item).toMatchObject({
+      actualAmountCents: null,
+      valueSource: "manual",
+      recordCount: 0,
+    });
+
+    const cascading = await createRecord(
+      database,
+      {
+        taxItemId: item!.id,
+        date: "2026-03-01",
+        description: "Example cascading Record",
+        amountCents: 1_000,
+        personId: null,
+        notes: null,
+        confirmReplaceActual: false,
+      },
+      {
+        fileName: "cascade.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 7,
+        data: Buffer.from("cascade"),
+      },
+    );
+    await caller.taxItem.delete({ id: item!.id });
+    expect(await database.query.records.findFirst({
+      where: (table, operators) => operators.eq(table.id, cascading.id),
+    })).toBeUndefined();
+    expect(await database.query.recordAttachments.findFirst({
+      where: (table, operators) => operators.eq(table.recordId, cascading.id),
+    })).toBeUndefined();
+  });
+
+  it("rejects Records on paycheque-calculated items and outside the active year", async () => {
+    await caller.setup.initialize({
+      householdName: "Example household",
+      people: ["Person A"],
+      year: 2026,
+    });
+    const person = (await caller.settings.get()).people[0]!;
+    await caller.employment.create({
+      personId: person.id,
+      employerName: "Employer A",
+      payFrequency: "biweekly",
+      status: "active",
+      endDate: null,
+      typicalGrossOverrideCents: null,
+    });
+    const employmentItem = (await caller.taxItem.list()).items[0]!;
+    await expect(
+      createRecord(database, {
+        taxItemId: employmentItem.id,
+        date: "2026-04-01",
+        description: "Example pay evidence",
+        amountCents: 100,
+        personId: person.id,
+        notes: null,
+        confirmReplaceActual: true,
+      }, null),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+
+    const manualItem = await caller.taxItem.create({
+      name: "Example contribution",
+      taxLineReference: "20800",
+      type: "deduction_contribution",
+      ownerKind: "person",
+      personId: person.id,
+      expectedAmountCents: null,
+      actualAmountCents: null,
+      status: "planned",
+      notes: null,
+    });
+    await caller.taxYear.create({ year: 2027 });
+    await expect(
+      createRecord(database, {
+        taxItemId: manualItem!.id,
+        date: "2027-01-15",
+        description: "Example contribution",
+        amountCents: 10_000,
+        personId: person.id,
+        notes: null,
+        confirmReplaceActual: false,
+      }, null),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });

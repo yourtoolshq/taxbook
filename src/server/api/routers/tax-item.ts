@@ -1,10 +1,10 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { buildOverview } from "~/domain/overview";
 import { taxItemInput, taxItemUpdateInput } from "~/domain/tax-item";
-import { people, taxItems } from "~/server/db/schema";
+import { people, records, taxItems } from "~/server/db/schema";
 import type { Database } from "../helpers";
 import { requireActiveYear, requireHousehold } from "../helpers";
 import { createTRPCRouter, publicProcedure } from "../trpc";
@@ -60,6 +60,20 @@ async function listActiveItems(db: Database) {
 
 export const taxItemRouter = createTRPCRouter({
   list: publicProcedure.query(({ ctx }) => listActiveItems(ctx.db)),
+  get: publicProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const { year, items } = await listActiveItems(ctx.db);
+      const item = items.find((candidate) => candidate.id === input.id);
+      if (!item) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Tax item not found." });
+      }
+      const [aggregate] = await ctx.db
+        .select({ recordCount: count() })
+        .from(records)
+        .where(eq(records.taxItemId, item.id));
+      return { year, item: { ...item, recordCount: aggregate?.recordCount ?? 0 } };
+    }),
   overview: publicProcedure.query(async ({ ctx }) => {
     const { household, year, items } = await listActiveItems(ctx.db);
     return { household, year, ...buildOverview(items) };
@@ -101,15 +115,28 @@ export const taxItemRouter = createTRPCRouter({
           message: "Manage this calculated item from Paycheques.",
         });
       }
-      const [item] = await ctx.db
-        .update(taxItems)
-        .set({
-          ...values,
-          taxLineReference: values.taxLineReference || null,
-          notes: values.notes || null,
-        })
-        .where(and(eq(taxItems.id, id), eq(taxItems.taxYearId, year.id)))
-        .returning();
+      const item = await ctx.db.transaction(async (tx) => {
+        const [updated] = await tx
+          .update(taxItems)
+          .set({
+            ...values,
+            actualAmountCents:
+              existing?.valueSource === "records"
+                ? existing.actualAmountCents
+                : values.actualAmountCents,
+            taxLineReference: values.taxLineReference || null,
+            notes: values.notes || null,
+          })
+          .where(and(eq(taxItems.id, id), eq(taxItems.taxYearId, year.id)))
+          .returning();
+        if (updated?.ownerKind === "person") {
+          await tx
+            .update(records)
+            .set({ personId: updated.personId })
+            .where(eq(records.taxItemId, updated.id));
+        }
+        return updated;
+      });
       if (!item) {
         throw new TRPCError({
           code: "NOT_FOUND",

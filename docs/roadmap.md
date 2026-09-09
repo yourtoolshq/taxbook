@@ -123,6 +123,15 @@ A Record may contain:
 * uploaded document or image
 * notes
 
+In the implemented workflow, date, description, and a positive amount are
+required. A Record may include one PDF or image attachment and an optional
+Person for household-owned items. Record amounts are summed into the Tax Item's
+actual amount; status remains manually managed. Paycheque-calculated Tax Items
+do not accept Records because their value already has a source of truth.
+
+Attachments are stored in SQLite so the existing database backup and restore
+workflow includes the supporting files.
+
 ### Example
 
 ```text

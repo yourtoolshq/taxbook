@@ -49,6 +49,14 @@ The Tax Item represents the tax-relevant total.
 
 The Records explain and support how that total was reached.
 
+For a manual Tax Item with Records, the actual amount is the sum of its Record
+amounts. Each Record amount is the user-entered amount counted toward the Tax
+Item; Tax Book does not decide tax eligibility or calculate reimbursements.
+
+A Record may have one supporting PDF or image stored with the local database.
+Person-owned items pass their owner down to their Records, while household
+items may identify the Person concerned by an individual Record.
+
 ---
 
 ### Record vs Tax Document

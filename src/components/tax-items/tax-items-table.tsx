@@ -82,11 +82,7 @@ export function TaxItemsTable({
         header: "Item",
         cell: (info) => (
           <div className="max-w-64">
-            {info.row.original.valueSource === "paycheques" ? (
-              <Link className="block truncate font-medium hover:text-primary" href="/paycheques">{info.getValue()}</Link>
-            ) : (
-              <button className="block truncate text-left font-medium hover:text-primary" onClick={() => onEdit(info.row.original)}>{info.getValue()}</button>
-            )}
+            <Link className="block truncate font-medium hover:text-primary hover:underline" href={`/items/${info.row.original.id}`}>{info.getValue()}</Link>
             {info.row.original.valueSource === "paycheques" ? (
               <p className="mt-0.5 truncate text-xs text-muted-foreground">Calculated from paycheques</p>
             ) : info.row.original.notes ? (

@@ -90,7 +90,7 @@ export function TaxItems() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this tax item?</AlertDialogTitle>
             <AlertDialogDescription>
-              “{deleting?.name}” will be permanently removed from this tax year. This cannot be undone.
+              “{deleting?.name}”, all of its supporting Records, and their attachments will be permanently removed from this tax year. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

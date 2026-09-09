@@ -21,16 +21,52 @@ test("sets up a household and tracks an item", async ({ page }) => {
   await page.getByRole("button", { name: "Add tax item" }).last().click();
 
   await expect(page.getByText("Tax item created.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Example employment income", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Example employment income", exact: true })).toBeVisible();
   await expect(page.getByText("10100", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Example employment income", exact: true }).click();
+  await page.getByRole("link", { name: "Example employment income", exact: true }).click();
+  await page.getByRole("button", { name: "Add Record" }).first().click();
+  await page.getByLabel("Date").fill("2025-12-15");
+  await page.getByLabel("Description").fill("Example supporting expense");
+  await page.getByLabel("Amount counted").fill("300");
+  await page.getByLabel("Attachment").setInputFiles({
+    name: "fictional-receipt.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("fictional PDF content"),
+  });
+  await page.getByRole("button", { name: "Add Record" }).last().click();
+  await expect(page.getByRole("heading", { name: "Use Records for the actual amount?" })).toBeVisible();
+  await page.getByRole("button", { name: "Replace and add Record" }).click();
+  await expect(page.getByText("Record added.")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "$300.00" })).toBeVisible();
+  const attachmentHref = await page.getByRole("link", { name: "fictional-receipt.pdf" }).getAttribute("href");
+  const attachmentResponse = await page.request.get(attachmentHref!);
+  expect(attachmentResponse.ok()).toBe(true);
+  expect(attachmentResponse.headers()["content-type"]).toBe("application/pdf");
+  expect(attachmentResponse.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(attachmentResponse.headers()["content-disposition"]).toContain("inline");
+  expect(await attachmentResponse.text()).toBe("fictional PDF content");
+  const downloadResponse = await page.request.get(`${attachmentHref}?download=1`);
+  expect(downloadResponse.headers()["content-disposition"]).toContain("attachment");
+
+  await page.getByRole("button", { name: "Example supporting expense", exact: true }).click();
+  await page.getByLabel("Amount counted").fill("450");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Record updated.")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "$450.00" })).toBeVisible();
+  await page.getByRole("button", { name: "Actions for Example supporting expense" }).click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: "Delete Record" }).click();
+  await expect(page.getByText("Record deleted.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Edit Tax Item" }).click();
   await page.getByLabel("Actual amount").fill("15000");
   await page.getByLabel("Status").click();
   await page.getByRole("option", { name: "In progress" }).click();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Tax item updated.")).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("button", { name: "Example employment income", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Example employment income", exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: "Overview" }).click();
   await expect(page.getByText("$15,000.00")).toBeVisible();
@@ -55,7 +91,7 @@ test("sets up a household and tracks an item", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Delete this tax item?" })).toBeVisible();
   await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(page.getByRole("button", { name: "Example employment income", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Example employment income", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Actions for Example employment income" }).click();
   await page.keyboard.press("End");
   await page.keyboard.press("Enter");
@@ -64,7 +100,7 @@ test("sets up a household and tracks an item", async ({ page }) => {
   await expect(page.getByText("No tax items yet")).toBeVisible();
 
   await page.getByRole("link", { name: "Paycheques", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Paycheques" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Paycheques", level: 2 })).toBeVisible();
   await page.getByRole("button", { name: "Add employment" }).click();
   await page.getByLabel("Employer label").fill("Employer A");
   await page.getByRole("button", { name: "Add employment" }).last().click();

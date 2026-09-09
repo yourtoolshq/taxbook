@@ -70,6 +70,7 @@ export function ItemFormSheet({
   const finish = async (message: string) => {
     await Promise.all([
       utils.taxItem.list.invalidate(),
+      utils.taxItem.get.invalidate(),
       utils.taxItem.overview.invalidate(),
     ]);
     toast.success(message);
@@ -167,7 +168,8 @@ export function ItemFormSheet({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="actual-amount">Actual amount</Label>
-                <div className="relative"><span className="absolute left-3 top-2.5 text-sm text-muted-foreground">$</span><Input id="actual-amount" className="pl-7 tabular-nums" inputMode="decimal" placeholder="Optional" value={actual} onChange={(event) => setActual(event.target.value)} /></div>
+                <div className="relative"><span className="absolute left-3 top-2.5 text-sm text-muted-foreground">$</span><Input id="actual-amount" className="pl-7 tabular-nums" inputMode="decimal" placeholder="Optional" value={actual} onChange={(event) => setActual(event.target.value)} disabled={item?.valueSource === "records"} /></div>
+                {item?.valueSource === "records" ? <p className="text-xs text-muted-foreground">Calculated from supporting Records. Edit the Records to change this amount.</p> : null}
               </div>
             </div>
             <div className="space-y-2">
